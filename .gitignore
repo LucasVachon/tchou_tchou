@@ -1,0 +1,31 @@
+# Fichiers de configuration et dépendances
+node_modules/
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Fichiers de build et de cache
+dist/
+build/
+cache/
+*.pyc
+__pycache__/
+*.log
+*.swp
+
+# Fichiers IDE et éditeurs
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers de logs et de base de données
+*.sqlite
+*.db
+*.log
