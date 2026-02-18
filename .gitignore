@@ -29,3 +29,6 @@ Thumbs.db
 *.sqlite
 *.db
 *.log
+
+#data
+*.csv
