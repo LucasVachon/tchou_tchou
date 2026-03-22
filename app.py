@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="TCHOU TCHOU",
@@ -61,11 +62,56 @@ with st.container():
         unsafe_allow_html=True,
     )
 
-options = ["recherche", "statistique"]
-selection = st.radio("", options, index=0)
+options = ["recherche", "statistiques"]
+selection = st.radio("Navigation", options, index=0, label_visibility="collapsed")
 
-if selection == "statistique":
-    st.button("rechercher les festivals")
+if selection == "statistiques":
+    st.subheader("Statistiques")
+    st.markdown(
+        """
+La région la mieux desservie est l'**Île-de-France** avec **653 festivals** dont **650 bien desservis (99,5 %)**.
+La distance moyenne d'une gare à un festival y est de **1,88 km**.
+
+**Régions les moins bien desservies :**
+
+1. **Bretagne**
+   - Festivals : 590
+   - Mal desservis : 32 (5,4 %)
+   - Distance moyenne : 9,56 km
+
+2. **Auvergne-Rhône-Alpes**
+   - Festivals : 947
+   - Mal desservis : 50 (5,3 %)
+   - Distance moyenne : 8,02 km
+
+3. **Occitanie**
+   - Festivals : 900
+   - Mal desservis : 45 (5,0 %)
+   - Distance moyenne : 9,25 km
+"""
+    )
+
+    st.markdown("### Nombre de festivals par département")
+    st.image("./figure1.png", width="stretch")
+
+    st.markdown("### Carte interactive de la couverture ferroviaire")
+    html_paths = [
+        "./output_map_chevauchement_metropole.html",
+        "./output_map_chevauchement.html",
+    ]
+    stats_html = None
+    for html_path in html_paths:
+        try:
+            with open(html_path, "r", encoding="utf-8") as html_file:
+                stats_html = html_file.read()
+            break
+        except FileNotFoundError:
+            continue
+
+    if stats_html:
+        components.html(stats_html, height=760, scrolling=True)
+    else:
+        st.info("Carte interactive non trouvée dans le dépôt (fichier HTML manquant).")
 else:
     event_date = pd.Timestamp(st.date_input("Quand voulez‑vous partir ?"))
 
