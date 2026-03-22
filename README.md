@@ -1,1 +1,1 @@
-# tchou_tchou
+streamlit run app.py
