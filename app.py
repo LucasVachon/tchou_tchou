@@ -275,6 +275,11 @@ else:
                         st.text(
                             "Type : " + festival_row["Discipline dominante"])
 
+                        if festival_row["Source date"] != "period-fallback" and festival_row["Source date"] != "seed:festivals-global-festivals-pl-avec-dates-10-premiers.csv":
+                            url = festival_row["Source date"]
+                            st.markdown(
+                                f"Lien : [{festival_row['Source date']}]({url})")
+
                         st.markdown("---")
 
                         grandes_gares_only = st.checkbox(
