@@ -6,6 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 import math
+import streamlit.components.v1 as components
 
 # ==========================================
 # CONFIGURATION DE LA PAGE
@@ -145,22 +146,77 @@ with st.spinner("⏳ Chargement des données..."):
     festivals_df, gares_df = charger_donnees()
 
 # ==========================================
-# 3. INTERFACE PRINCIPALE (FESTIVALS)
+# 3. INTERFACE PRINCIPALE
 # ==========================================
 
 with st.container():
     st.markdown("<h1 class='main-title'>Découverte de Festivals avec TCHOU TCHOU</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Explorez les festivals à proximité et planifiez votre itinéraire optimal en train</p>", unsafe_allow_html=True)
 
-options = ["recherche", "statistique"]
+options = ["recherche", "statistiques"]
 selection = st.radio("", options, index=0)
 
-if selection == "statistique":
-    st.session_state["show_itinerary"] = False
-    st.button("rechercher les festivals")
-    st.info("L'espace statistiques est en construction...") 
+# ==========================================
+# ONGLET STATISTIQUES
+# ==========================================
+if selection == "statistiques":
+    st.session_state["show_itinerary"] = False # Désactive le trajet
+    
+    st.subheader("Statistiques")
+    st.markdown(
+        """
+La région la mieux desservie est l'**Île-de-France** avec **653 festivals** dont **650 bien desservis (99,5 %)**.
+La distance moyenne d'une gare à un festival y est de **1,88 km**.
+
+**Régions les moins bien desservies :**
+
+1. **Bretagne**
+   - Festivals : 590
+   - Mal desservis : 32 (5,4 %)
+   - Distance moyenne : 9,56 km
+
+2. **Auvergne-Rhône-Alpes**
+   - Festivals : 947
+   - Mal desservis : 50 (5,3 %)
+   - Distance moyenne : 8,02 km
+
+3. **Occitanie**
+   - Festivals : 900
+   - Mal desservis : 45 (5,0 %)
+   - Distance moyenne : 9,25 km
+"""
+    )
+
+    st.markdown("### Nombre de festivals par département")
+    try:
+        st.image("./figure1.png", use_container_width=True) 
+    except FileNotFoundError:
+        st.warning("L'image ./figure1.png n'a pas été trouvée.")
+
+    st.markdown("### Carte interactive de la couverture ferroviaire")
+    html_paths = [
+        "./output_map_chevauchement_metropole.html",
+        "./output_map_chevauchement.html",
+    ]
+    stats_html = None
+    for html_path in html_paths:
+        try:
+            with open(html_path, "r", encoding="utf-8") as html_file:
+                stats_html = html_file.read()
+            break
+        except FileNotFoundError:
+            continue
+
+    if stats_html:
+        components.html(stats_html, height=760, scrolling=True)
+    else:
+        st.info("Carte interactive non trouvée dans le dépôt (fichier HTML manquant).")
+
+# ==========================================
+# ONGLET RECHERCHE
+# ==========================================
 else:
-    event_date = pd.Timestamp(st.date_input("Quand voulez-vous partir ?"))
+    event_date = pd.Timestamp(st.date_input("Quand voulez-vous partir ?", format="DD/MM/YYYY"))
 
     if st.button("rechercher les festivals"):
         st.session_state["searched"] = True
@@ -196,27 +252,26 @@ else:
                         st.subheader(festival_row["Nom du festival"])
                         st.text("Région : " + festival_row["Région principale de déroulement"])
                         
-                        date_debut = pd.to_datetime(festival_row["Date de début"]).strftime("%Y-%m-%d")
-                        date_fin = pd.to_datetime(festival_row["Date de fin"]).strftime("%Y-%m-%d")
+                        # --- MODIFICATION ICI : Format JJ/MM/AAAA ---
+                        date_debut = pd.to_datetime(festival_row["Date de début"]).strftime("%d/%m/%Y")
+                        date_fin = pd.to_datetime(festival_row["Date de fin"]).strftime("%d/%m/%Y")
+                        
                         st.text(f"Dates : du {date_debut} au {date_fin}")
                         st.text("Type : " + festival_row["Discipline dominante"])
                         
                         st.markdown("---")
                         
-                        # --- NOUVEAU : Option pour filtrer par grandes gares ---
-                        grandes_gares_only = st.checkbox("Grandes gares uniquement", value=False)
+                        grandes_gares_only = st.checkbox("Grandes gares uniquement (TGV/Intercités)", value=False)
                         
                         fest_lat = festival_row["lat"]
                         fest_lon = festival_row["lon"]
                         
-                        # Application du filtre si la case est cochée
                         gares_cibles = gares_df
                         if grandes_gares_only:
                             gares_cibles = gares_df[gares_df["Segment(s) DRG"].isin(["A", "A;A"])]
-                            if gares_cibles.empty: # Sécurité au cas où
+                            if gares_cibles.empty:
                                 gares_cibles = gares_df
 
-                        # Calcul de la gare la plus proche (soit toutes les gares, soit que les grandes)
                         gare_proche = trouver_gare_plus_proche(fest_lat, fest_lon, gares_cibles)
                         
                         st.markdown(f"**🚆 Gare la plus proche :** {gare_proche['Nom']}")
@@ -239,7 +294,7 @@ else:
                             with st.container(border=True):
                                 col1, col2, col3, col4 = st.columns([0.8, 3, 2, 2])
                                 with col1:
-                                    if st.button("🔎 Détails", key=f"select_{i}"):
+                                    if st.button("🔎 Détails", key=f"select_{i}", use_container_width=True):
                                         st.session_state["festival_select"] = row["Nom du festival"]
                                         st.session_state["show_itinerary"] = False
                                         st.rerun()
