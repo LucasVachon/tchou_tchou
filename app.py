@@ -23,7 +23,7 @@ load_dotenv()
 API_KEY = os.getenv("SNCF_API_KEY")
 BASE_URL = "https://api.sncf.com/v1/coverage/sncf"
 
-# Chemins des fichiers 
+# Chemins des fichiers
 CSV_FESTIVALS = "festivals-global-festivals-pl-avec-dates-V2.csv"
 CSV_GARES = "gares-de-voyageurs.csv"
 
@@ -67,60 +67,78 @@ st.markdown("""
 # 1. FONCTIONS BACKEND
 # ==========================================
 
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * \
+        math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
+
 
 @st.cache_data
 def charger_donnees():
     try:
         df_festivals = pd.read_csv(CSV_FESTIVALS, sep=";")
-        
+
         df_gares = pd.read_csv(CSV_GARES, sep=';', dtype={'Code(s) UIC': str})
-        df_gares = df_gares.dropna(subset=['Nom', 'Position géographique']).drop_duplicates(subset=['Nom'])
-        df_gares[['lat', 'lon']] = df_gares['Position géographique'].str.split(',', expand=True).astype(float)
+        df_gares = df_gares.dropna(
+            subset=['Nom', 'Position géographique']).drop_duplicates(subset=['Nom'])
+        df_gares[['lat', 'lon']] = df_gares['Position géographique'].str.split(
+            ',', expand=True).astype(float)
         df_gares = df_gares.sort_values('Nom')
-        
+
         return df_festivals, df_gares
     except Exception as e:
         st.error(f"❌ Erreur lors du chargement des données : {str(e)}")
         st.stop()
 
+
 def trouver_gare_plus_proche(lat_fest, lon_fest, df_gares):
-    distances = df_gares.apply(lambda row: haversine(lat_fest, lon_fest, row['lat'], row['lon']), axis=1)
+    distances = df_gares.apply(lambda row: haversine(
+        lat_fest, lon_fest, row['lat'], row['lon']), axis=1)
     index_proche = distances.idxmin()
     return df_gares.loc[index_proche]
+
 
 def formater_id_sncf(code_uic):
     code = str(code_uic).split(';')[0].strip()
     return f"stop_area:SNCF:{code}"
 
+
 def format_heure_affichage(str_date):
     dt = datetime.strptime(str_date, "%Y%m%dT%H%M%S")
     return dt.strftime("%Hh%M")
+
 
 def nettoyer_nom_gare(nom):
     if "(" in nom:
         nom = nom.split("(")[0].strip()
     return nom
 
+
 def detecter_type_train(raw_mode):
     mode_lower = raw_mode.lower()
-    if "grande vitesse" in mode_lower or "tgv" in mode_lower or "ouigo" in mode_lower: return "TGV", "tgv"
-    elif "ter" in mode_lower: return "TER", "ter"
-    elif "intercités" in mode_lower: return "Intercités", "intercites"
-    elif "autocar" in mode_lower or "bus" in mode_lower: return "Autocar", "autocar"
-    else: return raw_mode.capitalize(), "other"
+    if "grande vitesse" in mode_lower or "tgv" in mode_lower or "ouigo" in mode_lower:
+        return "TGV", "tgv"
+    elif "ter" in mode_lower:
+        return "TER", "ter"
+    elif "intercités" in mode_lower:
+        return "Intercités", "intercites"
+    elif "autocar" in mode_lower or "bus" in mode_lower:
+        return "Autocar", "autocar"
+    else:
+        return raw_mode.capitalize(), "other"
+
 
 def get_journeys_detailed(id_dep, id_arr, date_obj):
     date_str_api = date_obj.strftime("%Y%m%dT000000")
     date_filter = date_obj.strftime("%Y%m%d")
     url = f"{BASE_URL}/journeys"
-    params = {'from': id_dep, 'to': id_arr, 'datetime': date_str_api, 'min_nb_journeys': 20}
+    params = {'from': id_dep, 'to': id_arr,
+              'datetime': date_str_api, 'min_nb_journeys': 20}
 
     try:
         response = requests.get(url, params=params, auth=(API_KEY, ''))
@@ -130,17 +148,23 @@ def get_journeys_detailed(id_dep, id_arr, date_obj):
         return None
 
     data = response.json()
-    if 'journeys' not in data: return []
+    if 'journeys' not in data:
+        return []
     return [j for j in data['journeys'] if j['departure_date_time'][:8] == date_filter]
 
 # ==========================================
 # 2. INITIALISATION DU SESSION STATE
 # ==========================================
 
-if "searched" not in st.session_state: st.session_state["searched"] = False
-if "festival_select" not in st.session_state: st.session_state["festival_select"] = None
-if "show_itinerary" not in st.session_state: st.session_state["show_itinerary"] = False
-if "gare_arrivee_auto" not in st.session_state: st.session_state["gare_arrivee_auto"] = None
+
+if "searched" not in st.session_state:
+    st.session_state["searched"] = False
+if "festival_select" not in st.session_state:
+    st.session_state["festival_select"] = None
+if "show_itinerary" not in st.session_state:
+    st.session_state["show_itinerary"] = False
+if "gare_arrivee_auto" not in st.session_state:
+    st.session_state["gare_arrivee_auto"] = None
 
 with st.spinner("⏳ Chargement des données..."):
     festivals_df, gares_df = charger_donnees()
@@ -150,7 +174,8 @@ with st.spinner("⏳ Chargement des données..."):
 # ==========================================
 
 with st.container():
-    st.markdown("<h1 class='main-title'>Découverte de Festivals avec TCHOU TCHOU</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='main-title'>Découverte de Festivals avec TCHOU TCHOU</h1>",
+                unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Explorez les festivals à proximité et planifiez votre itinéraire optimal en train</p>", unsafe_allow_html=True)
 
 options = ["recherche", "statistiques"]
@@ -160,36 +185,14 @@ selection = st.radio("", options, index=0)
 # ONGLET STATISTIQUES
 # ==========================================
 if selection == "statistiques":
-    st.session_state["show_itinerary"] = False # Désactive le trajet
-    
-    st.subheader("Statistiques")
-    st.markdown(
-        """
-La région la mieux desservie est l'**Île-de-France** avec **653 festivals** dont **650 bien desservis (99,5 %)**.
-La distance moyenne d'une gare à un festival y est de **1,88 km**.
+    st.session_state["show_itinerary"] = False  # Désactive le trajet
 
-**Régions les moins bien desservies :**
-
-1. **Bretagne**
-   - Festivals : 590
-   - Mal desservis : 32 (5,4 %)
-   - Distance moyenne : 9,56 km
-
-2. **Auvergne-Rhône-Alpes**
-   - Festivals : 947
-   - Mal desservis : 50 (5,3 %)
-   - Distance moyenne : 8,02 km
-
-3. **Occitanie**
-   - Festivals : 900
-   - Mal desservis : 45 (5,0 %)
-   - Distance moyenne : 9,25 km
-"""
-    )
+    st.subheader(
+        "Visualisez l'offre culturelle et la couverture ferroviaire française !")
 
     st.markdown("### Nombre de festivals par département")
     try:
-        st.image("./figure1.png", use_container_width=True) 
+        st.image("./figure1.png", use_container_width=True)
     except FileNotFoundError:
         st.warning("L'image ./figure1.png n'a pas été trouvée.")
 
@@ -216,65 +219,82 @@ La distance moyenne d'une gare à un festival y est de **1,88 km**.
 # ONGLET RECHERCHE
 # ==========================================
 else:
-    event_date = pd.Timestamp(st.date_input("Quand voulez-vous partir ?", format="DD/MM/YYYY"))
+    event_date_debut = pd.Timestamp(st.date_input(
+        "À partir de quand voulez-vous partir ?", format="DD/MM/YYYY"))
+    event_date_fin = pd.Timestamp(st.date_input(
+        "Jusqu'à quand voulez-vous partir ?", format="DD/MM/YYYY"))
 
     if st.button("rechercher les festivals"):
         st.session_state["searched"] = True
-        st.session_state["show_itinerary"] = False 
+        st.session_state["show_itinerary"] = False
 
     if st.session_state["searched"]:
         box1, box2 = st.columns([2, 1])
         df_work = festivals_df.copy()
 
-        df_work["Date de début"] = pd.to_datetime(df_work["Date de début"]).dt.strftime('%Y-%m-%d').str.replace('2019', '2026')
+        df_work["Date de début"] = pd.to_datetime(
+            df_work["Date de début"]).dt.strftime('%Y-%m-%d').str.replace('2019', '2026')
         df_work["Date de début"] = pd.to_datetime(df_work["Date de début"])
-        df_work["Date de fin"] = pd.to_datetime(df_work["Date de fin"]).dt.strftime('%Y-%m-%d').str.replace('2019', '2026')
+        df_work["Date de fin"] = pd.to_datetime(df_work["Date de fin"]).dt.strftime(
+            '%Y-%m-%d').str.replace('2019', '2026')
         df_work["Date de fin"] = pd.to_datetime(df_work["Date de fin"])
-        df_work[["lat", "lon"]] = df_work["Géocodage xy"].str.split(",", expand=True).astype(float)
+        df_work[["lat", "lon"]] = df_work["Géocodage xy"].str.split(
+            ",", expand=True).astype(float)
 
         festivals_filtres = df_work[
-            (df_work["Date de début"] <= event_date) & 
-            (event_date <= df_work["Date de fin"])
+            (df_work["Date de début"] <= event_date_fin) &
+            (event_date_debut <= df_work["Date de fin"])
         ]
 
         if festivals_filtres.empty:
             st.warning("Aucun festival à cette date...")
         else:
             with box2:
-                liste_type_festival = festivals_filtres["Discipline dominante"].dropna().unique().tolist()
+                liste_type_festival = festivals_filtres["Discipline dominante"].dropna(
+                ).unique().tolist()
                 st.title("Filtres")
-                filtre_type = st.multiselect("Type de festival", liste_type_festival, default=liste_type_festival)
-                
+                filtre_type = st.multiselect(
+                    "Type de festival", liste_type_festival, default=liste_type_festival)
+
                 if st.session_state["festival_select"]:
-                    festival_row = df_work[df_work["Nom du festival"] == st.session_state["festival_select"]].iloc[0]
+                    festival_row = df_work[df_work["Nom du festival"]
+                                           == st.session_state["festival_select"]].iloc[0]
                     st.title("Détails")
                     with st.container(border=True):
                         st.subheader(festival_row["Nom du festival"])
-                        st.text("Région : " + festival_row["Région principale de déroulement"])
-                        
+                        st.text(
+                            "Région : " + festival_row["Région principale de déroulement"])
+
                         # --- MODIFICATION ICI : Format JJ/MM/AAAA ---
-                        date_debut = pd.to_datetime(festival_row["Date de début"]).strftime("%d/%m/%Y")
-                        date_fin = pd.to_datetime(festival_row["Date de fin"]).strftime("%d/%m/%Y")
-                        
+                        date_debut = pd.to_datetime(
+                            festival_row["Date de début"]).strftime("%d/%m/%Y")
+                        date_fin = pd.to_datetime(
+                            festival_row["Date de fin"]).strftime("%d/%m/%Y")
+
                         st.text(f"Dates : du {date_debut} au {date_fin}")
-                        st.text("Type : " + festival_row["Discipline dominante"])
-                        
+                        st.text(
+                            "Type : " + festival_row["Discipline dominante"])
+
                         st.markdown("---")
-                        
-                        grandes_gares_only = st.checkbox("Grandes gares uniquement (TGV/Intercités)", value=False)
-                        
+
+                        grandes_gares_only = st.checkbox(
+                            "Grandes gares uniquement (TGV/Intercités)", value=False)
+
                         fest_lat = festival_row["lat"]
                         fest_lon = festival_row["lon"]
-                        
+
                         gares_cibles = gares_df
                         if grandes_gares_only:
-                            gares_cibles = gares_df[gares_df["Segment(s) DRG"].isin(["A", "A;A"])]
+                            gares_cibles = gares_df[gares_df["Segment(s) DRG"].isin([
+                                "A", "A;A"])]
                             if gares_cibles.empty:
                                 gares_cibles = gares_df
 
-                        gare_proche = trouver_gare_plus_proche(fest_lat, fest_lon, gares_cibles)
-                        
-                        st.markdown(f"**🚆 Gare la plus proche :** {gare_proche['Nom']}")
+                        gare_proche = trouver_gare_plus_proche(
+                            fest_lat, fest_lon, gares_cibles)
+
+                        st.markdown(
+                            f"**🚆 Gare la plus proche :** {gare_proche['Nom']}")
 
                         if st.button("Calculer l'itinéraire en train", type="primary"):
                             st.session_state["show_itinerary"] = True
@@ -282,26 +302,47 @@ else:
                             st.rerun()
 
             if filtre_type:
-                festivals_filtres = festivals_filtres[festivals_filtres["Discipline dominante"].isin(filtre_type)]
+                festivals_filtres = festivals_filtres[festivals_filtres["Discipline dominante"].isin(
+                    filtre_type)]
 
             with box1:
                 st.title(str(len(festivals_filtres)) + " résultats")
+
+                liste_nom_festival = festivals_filtres["Nom du festival"].dropna(
+                ).unique().tolist()
+                search_festival = st.selectbox(
+                    "🔍 Rechercher un festival par nom",
+                    liste_nom_festival,
+                    index=None
+                )
+
+                if search_festival:
+                    festivals_filtres = festivals_filtres[
+                        festivals_filtres["Nom du festival"].str.contains(
+                            search_festival, case=False, na=False
+                        )
+                    ]
+
                 tab1, tab2 = st.tabs(["Liste", "Carte"])
-                
+
                 with tab1:
                     with st.container(height=500, border=False):
                         for i, row in festivals_filtres.iterrows():
                             with st.container(border=True):
-                                col1, col2, col3, col4 = st.columns([0.8, 3, 2, 2])
+                                col1, col2, col3, col4 = st.columns(
+                                    [0.8, 3, 2, 2])
                                 with col1:
                                     if st.button("🔎 Détails", key=f"select_{i}", use_container_width=True):
                                         st.session_state["festival_select"] = row["Nom du festival"]
                                         st.session_state["show_itinerary"] = False
                                         st.rerun()
-                                with col2: st.write(row["Nom du festival"])
-                                with col3: st.write(row["Discipline dominante"])
+                                with col2:
+                                    st.write(row["Nom du festival"])
+                                with col3:
+                                    st.write(row["Discipline dominante"])
                                 with col4:
-                                    s = row["Date de début"].strftime("%d/%m/%Y")
+                                    s = row["Date de début"].strftime(
+                                        "%d/%m/%Y")
                                     e = row["Date de fin"].strftime("%d/%m/%Y")
                                     st.write(f"{s} - {e}")
 
@@ -315,7 +356,8 @@ else:
                     )
                     deck = pdk.Deck(
                         layers=[layer], initial_view_state=view_state,
-                        tooltip={"text": "{Nom du festival}", "region": "{Région principale de déroulement}"}
+                        tooltip={"text": "{Nom du festival}",
+                                 "region": "{Région principale de déroulement}"}
                     )
                     st.pydeck_chart(deck)
 
@@ -327,28 +369,33 @@ else:
 if selection == "recherche" and st.session_state.get("show_itinerary", False):
     st.markdown("---")
     st.title("🚄 Réservez votre trajet")
-    
+
     with st.container(border=True):
         colA, colB, colC = st.columns(3)
         liste_noms = gares_df['Nom'].tolist()
-        
+
         gare_auto = st.session_state["gare_arrivee_auto"]
-        index_arrivee = liste_noms.index(gare_auto) if gare_auto in liste_noms else None
+        index_arrivee = liste_noms.index(
+            gare_auto) if gare_auto in liste_noms else None
 
         with colA:
-            ville_dep_nom = st.selectbox("Départ", liste_noms, index=None, placeholder="Votre gare de départ")
+            ville_dep_nom = st.selectbox(
+                "Départ", liste_noms, index=None, placeholder="Votre gare de départ")
         with colB:
-            ville_arr_nom = st.selectbox("Arrivée (Gare du festival)", liste_noms, index=index_arrivee)
+            ville_arr_nom = st.selectbox(
+                "Arrivée (Gare du festival)", liste_noms, index=index_arrivee)
         with colC:
-            date_voyage = st.date_input("Date du voyage", event_date, format="DD/MM/YYYY")
+            date_voyage = st.date_input(
+                "Date du voyage", event_date_debut, format="DD/MM/YYYY")
 
-        btn_train = st.button("Rechercher les trains", use_container_width=True)
+        btn_train = st.button("Rechercher les trains",
+                              use_container_width=True)
 
     if btn_train:
         if ville_dep_nom and ville_arr_nom:
             row_dep = gares_df[gares_df['Nom'] == ville_dep_nom].iloc[0]
             id_dep = formater_id_sncf(row_dep['Code(s) UIC'])
-            
+
             row_arr = gares_df[gares_df['Nom'] == ville_arr_nom].iloc[0]
             id_arr = formater_id_sncf(row_arr['Code(s) UIC'])
 
@@ -356,33 +403,42 @@ if selection == "recherche" and st.session_state.get("show_itinerary", False):
                 journeys = get_journeys_detailed(id_dep, id_arr, date_voyage)
 
             if journeys:
-                st.write(f"### 🗓️ Trajets trouvés pour le {date_voyage.strftime('%d/%m/%Y')}")
+                st.write(
+                    f"### 🗓️ Trajets trouvés pour le {date_voyage.strftime('%d/%m/%Y')}")
                 for journey in journeys:
-                    dep_time = format_heure_affichage(journey['departure_date_time'])
-                    arr_time = format_heure_affichage(journey['arrival_date_time'])
+                    dep_time = format_heure_affichage(
+                        journey['departure_date_time'])
+                    arr_time = format_heure_affichage(
+                        journey['arrival_date_time'])
                     duree_sec = journey['duration']
                     duree = f"{duree_sec // 3600}h{(duree_sec % 3600) // 60:02d}"
                     nb_transfers = journey.get('nb_transfers', 0)
-                    
+
                     type_trajet_txt = "Direct ✨" if nb_transfers == 0 else f"{nb_transfers} corresp. 🔄"
                     titre_carte = f"**{dep_time}** ➝ **{arr_time}** | ⏱️ {duree} | {type_trajet_txt}"
-                    
+
                     with st.expander(titre_carte):
                         sections = journey['sections']
                         for i, section in enumerate(sections):
                             mode = section.get('type')
-                            if i == 0 and mode == 'street_network': continue
+                            if i == 0 and mode == 'street_network':
+                                continue
 
                             if mode == 'public_transport':
                                 info = section['display_informations']
                                 raw_mode = info['physical_mode']
                                 num_train = info.get('headsign', '')
-                                nom_mode, css_class = detecter_type_train(raw_mode)
-                                
-                                dep_sec = format_heure_affichage(section['departure_date_time'])
-                                arr_sec = format_heure_affichage(section['arrival_date_time'])
-                                dep_place = nettoyer_nom_gare(section['from']['name'])
-                                arr_place = nettoyer_nom_gare(section['to']['name'])
+                                nom_mode, css_class = detecter_type_train(
+                                    raw_mode)
+
+                                dep_sec = format_heure_affichage(
+                                    section['departure_date_time'])
+                                arr_sec = format_heure_affichage(
+                                    section['arrival_date_time'])
+                                dep_place = nettoyer_nom_gare(
+                                    section['from']['name'])
+                                arr_place = nettoyer_nom_gare(
+                                    section['to']['name'])
 
                                 html_code = (
                                     f'<div class="trajet-card {css_class}">'
@@ -395,13 +451,17 @@ if selection == "recherche" and st.session_state.get("show_itinerary", False):
                                     f'</div></div>'
                                 )
                                 st.markdown(html_code, unsafe_allow_html=True)
-                                
+
                             elif mode == 'waiting':
                                 duree_attente = section['duration'] // 60
-                                if duree_attente > 0: st.markdown(f'<div class="correspondance">⏳ {duree_attente} min</div>', unsafe_allow_html=True)
+                                if duree_attente > 0:
+                                    st.markdown(
+                                        f'<div class="correspondance">⏳ {duree_attente} min</div>', unsafe_allow_html=True)
                             elif mode == 'street_network':
                                 duree_marche = section['duration'] // 60
-                                if duree_marche > 0: st.markdown(f'<div class="correspondance">🚶 {duree_marche} min</div>', unsafe_allow_html=True)
+                                if duree_marche > 0:
+                                    st.markdown(
+                                        f'<div class="correspondance">🚶 {duree_marche} min</div>', unsafe_allow_html=True)
             else:
                 st.warning("Aucun train trouvé pour cette date/destination.")
         else:
