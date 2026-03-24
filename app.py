@@ -184,10 +184,8 @@ if selection == "Statistiques":
 
     st.subheader(
         "Visualisez l'offre culturelle et la couverture ferroviaire française !")
-
-    st.markdown("### Nombre de festivals par département")
     try:
-        st.image("./figure1.png", use_container_width=True)
+        st.image("./figure1.png", width=1300)
     except FileNotFoundError:
         st.warning("L'image ./figure1.png n'a pas été trouvée.")
 
