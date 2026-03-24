@@ -19,7 +19,22 @@ st.set_page_config(
 )
 
 load_dotenv()
+
+
 API_KEY = os.getenv("SNCF_API_KEY")
+
+if not API_KEY:
+    try:
+        API_KEY = st.secrets["SNCF_API_KEY"]
+    except Exception:
+        pass
+
+
+if not API_KEY:
+    st.error(" Clé API SNCF introuvable")
+    st.stop()
+
+
 BASE_URL = "https://api.sncf.com/v1/coverage/sncf"
 
 # Chemins des fichiers
