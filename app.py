@@ -169,7 +169,7 @@ with st.spinner("⏳ Chargement des données..."):
 # 3. INTERFACE PRINCIPALE
 
 with st.container():
-    st.markdown("<h1 class='main-title'>Découverte de Festivals avec TCHOU TCHOU</h1>",
+    st.markdown("<h1 class='main-title'>Découverte de Festivals avec TCHOU TCHOU FEST</h1>",
                 unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Explorez les festivals à proximité et planifiez votre itinéraire optimal en train</p>", unsafe_allow_html=True)
 
