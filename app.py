@@ -8,17 +8,16 @@ import os
 import math
 import streamlit.components.v1 as components
 
-# ==========================================
+
 # CONFIGURATION DE LA PAGE
-# ==========================================
+
 st.set_page_config(
-    page_title="TCHOU TCHOU - Festival & Train",
+    page_title="TCHOU TCHOU FEST - Festival & Train",
     page_icon="🚂",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Chargement des variables d'environnement
 load_dotenv()
 API_KEY = os.getenv("SNCF_API_KEY")
 BASE_URL = "https://api.sncf.com/v1/coverage/sncf"
@@ -27,9 +26,8 @@ BASE_URL = "https://api.sncf.com/v1/coverage/sncf"
 CSV_FESTIVALS = "festivals-global-festivals-pl-avec-dates-V2.csv"
 CSV_GARES = "gares-de-voyageurs.csv"
 
-# ==========================================
+
 # 0. STYLE CSS
-# ==========================================
 st.markdown("""
 <style>
     .main-title { text-align: center; color: #FF6B6B; margin-bottom: 10px; }
@@ -63,9 +61,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
+
 # 1. FONCTIONS BACKEND
-# ==========================================
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -152,9 +149,8 @@ def get_journeys_detailed(id_dep, id_arr, date_obj):
         return []
     return [j for j in data['journeys'] if j['departure_date_time'][:8] == date_filter]
 
-# ==========================================
+
 # 2. INITIALISATION DU SESSION STATE
-# ==========================================
 
 
 if "searched" not in st.session_state:
@@ -169,23 +165,22 @@ if "gare_arrivee_auto" not in st.session_state:
 with st.spinner("⏳ Chargement des données..."):
     festivals_df, gares_df = charger_donnees()
 
-# ==========================================
+
 # 3. INTERFACE PRINCIPALE
-# ==========================================
 
 with st.container():
     st.markdown("<h1 class='main-title'>Découverte de Festivals avec TCHOU TCHOU</h1>",
                 unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Explorez les festivals à proximité et planifiez votre itinéraire optimal en train</p>", unsafe_allow_html=True)
 
-options = ["recherche", "statistiques"]
+options = ["Recherche", "Statistiques"]
 selection = st.radio("", options, index=0)
 
-# ==========================================
+
 # ONGLET STATISTIQUES
 # ==========================================
-if selection == "statistiques":
-    st.session_state["show_itinerary"] = False  # Désactive le trajet
+if selection == "Statistiques":
+    st.session_state["show_itinerary"] = False  
 
     st.subheader(
         "Visualisez l'offre culturelle et la couverture ferroviaire française !")
@@ -215,9 +210,8 @@ if selection == "statistiques":
     else:
         st.info("Carte interactive non trouvée dans le dépôt (fichier HTML manquant).")
 
-# ==========================================
 # ONGLET RECHERCHE
-# ==========================================
+
 else:
     event_date_debut = pd.Timestamp(st.date_input(
         "À partir de quand voulez-vous partir ?", format="DD/MM/YYYY"))
@@ -265,7 +259,6 @@ else:
                         st.text(
                             "Région : " + festival_row["Région principale de déroulement"])
 
-                        # --- MODIFICATION ICI : Format JJ/MM/AAAA ---
                         date_debut = pd.to_datetime(
                             festival_row["Date de début"]).strftime("%d/%m/%Y")
                         date_fin = pd.to_datetime(
@@ -283,7 +276,7 @@ else:
                         st.markdown("---")
 
                         grandes_gares_only = st.checkbox(
-                            "Grandes gares uniquement (TGV/Intercités)", value=False)
+                            "Grandes gares uniquement", value=False)
 
                         fest_lat = festival_row["lat"]
                         fest_lon = festival_row["lon"]
@@ -367,11 +360,9 @@ else:
                     st.pydeck_chart(deck)
 
 
-# ==========================================
 # 4. ITINÉRAIRE TRAIN API SNCF
-# ==========================================
 
-if selection == "recherche" and st.session_state.get("show_itinerary", False):
+if selection == "Recherche" and st.session_state.get("show_itinerary", False):
     st.markdown("---")
     st.title("🚄 Réservez votre trajet")
 
@@ -404,12 +395,12 @@ if selection == "recherche" and st.session_state.get("show_itinerary", False):
             row_arr = gares_df[gares_df['Nom'] == ville_arr_nom].iloc[0]
             id_arr = formater_id_sncf(row_arr['Code(s) UIC'])
 
-            with st.spinner('Interrogation de la SNCF...'):
+            with st.spinner('Interrogation de l\'API SNCF...'):
                 journeys = get_journeys_detailed(id_dep, id_arr, date_voyage)
 
             if journeys:
                 st.write(
-                    f"### 🗓️ Trajets trouvés pour le {date_voyage.strftime('%d/%m/%Y')}")
+                    f"### Trajets trouvés pour le {date_voyage.strftime('%d/%m/%Y')}")
                 for journey in journeys:
                     dep_time = format_heure_affichage(
                         journey['departure_date_time'])
